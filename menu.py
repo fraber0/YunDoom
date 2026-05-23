@@ -2,12 +2,15 @@ import pygame
 import sys
 from settings import *
  
+
 def run_menu(screen):
     """
     Mostra il menu di avvio. Ritorna True se il giocatore vuole iniziare,
     False se vuole uscire.
     """
     clock = pygame.time.Clock()
+    
+    
  
     # Colori
     COLOR_BG        = (15, 15, 25)
@@ -66,6 +69,7 @@ def run_menu(screen):
         _draw_perspective_grid(screen, tick)
         screen.blit(scanline_surf, (0, 0))
  
+        '''
         # --- TITOLO ---
         title_surf = font_title.render("RAYCASTER", True, COLOR_TITLE)
         alpha = 200 + int(55 * abs(pygame.math.Vector2(1, 0).rotate(tick * 2).x))
@@ -74,6 +78,7 @@ def run_menu(screen):
  
         subtitle_surf = font_subtitle.render("usa le frecce per muoverti", True, COLOR_SUBTITLE)
         screen.blit(subtitle_surf, subtitle_surf.get_rect(center=(center_x, WINDOW_HEIGHT // 2 - 30)))
+        '''
  
         # --- BOTTONE PLAY ---
         play_hover = btn_play.collidepoint(mouse_pos)

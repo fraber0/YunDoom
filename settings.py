@@ -1,6 +1,6 @@
 import math
 
-TILESIZE = 64
+TILESIZE = 64 
 
 ROWS  = 10
 COLS = 15
@@ -12,3 +12,4 @@ FOV = 60 * (math.pi / 180)
 
 RES = 4
 NUM_RAYS = WINDOW_WIDTH // RES
+
