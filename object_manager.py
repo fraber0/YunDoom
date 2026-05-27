@@ -5,82 +5,113 @@ import random
 
 
 
-class Enemy:
-    def __init__(self, x, y, sprite_path, scale=1.0, y_offset=0.0):
+class MeleeEnemy:
+    """Nemico corpo a corpo: insegue il player e lo colpisce da vicino."""
+
+    def __init__(
+        self,
+        x, y, sprite_path,
+        *,
+        scale           = 1.0,
+        y_offset        = 0.0,
+        max_hp          = 100,
+        speed           = 1.0,
+        chase_distance  = 300,
+        stop_distance   = 14,
+        attack_damage   = 10,
+        attack_rate     = 60,   # frame tra un attacco e l'altro (60 = 1 sec a 60fps)
+    ):
         self.x = x
         self.y = y
+        self.sprite        = pygame.image.load(sprite_path).convert_alpha()
+        self.scale         = scale
+        self.y_offset      = y_offset
+        self.radius        = 10
 
-        self.sprite = pygame.image.load(sprite_path).convert_alpha()
+        self.speed          = speed
+        self.chase_distance = chase_distance
+        self.stop_distance  = stop_distance
+        self.attack_damage  = attack_damage
 
-        self.speed = 1
-
-        self.scale = scale
-        self.y_offset = y_offset
-
-        # Distanze AI
-        self.chase_distance = 200   # inizia a inseguire
-        self.stop_distance = 14     # smette di avanzare
-
-        # ── vita ──
-        self.max_hp = 100
-        self.hp     = 100
+        self.max_hp = max_hp
+        self.hp     = max_hp
         self.alive  = True
 
-        # danno inflitto al player ogni N frame quando è vicino
-        self._attack_cooldown    = 0
-        self._attack_cooldown_max = 60   # 1 secondo a 60 fps
+        self._cooldown     = 0
+        self._cooldown_max = attack_rate
+
+        self._damage_sound = pygame.mixer.Sound("./Assets/sounds/damage.mp3")
+        self._damage_sound.set_volume(1.5)
+        self._attack_sound = pygame.mixer.Sound("./Assets/sounds/PM_attacco.mp3")
+        self._attack_sound.set_volume(1.5)
+
+    # ── helpers ──────────────────────────────────────────────────────────────
 
     def take_damage(self, amount):
         self.hp = max(0, self.hp - amount)
         if self.hp == 0:
             self.alive = False
 
-    def update(self, player):
-        if not self.alive:
-            return
-
-        # Differenza posizione
-        dx = player.x - self.x
-        dy = player.y - self.y
-
-        # Distanza dal player
-        dist = math.sqrt(dx * dx + dy * dy)
-
-        # Player troppo lontano → fermo
-        if dist > self.chase_distance:
-            return
-
-        damage_sound = pygame.mixer.Sound(
-            "./Assets/sounds/damage.mp3"
-        )
-        damage_sound.set_volume(1.5)
-
-        # Attacca il player se abbastanza vicino
-        if dist < self.stop_distance:
-            self._attack_cooldown -= 1
-            if self._attack_cooldown <= 0:
-                damage_sound.play()
-                player.hp = max(0, player.hp - 10)
-                self._attack_cooldown = self._attack_cooldown_max
-            return
-
-        # Evita divisione per 0
-        if dist == 0:
-            return
-
-        # Direzione normalizzata
-        nx = dx / dist
-        ny = dy / dist
-
-        # Movimento
-        self.x += nx * self.speed
-        self.y += ny * self.speed
-
     def distance_to(self, player):
         dx = self.x - player.x
         dy = self.y - player.y
-
         return math.sqrt(dx * dx + dy * dy)
+
+    def _move(self, nx, ny, game_map):
+        """Sliding movement: prova x e y separatamente per non incastrarsi nei muri."""
+        new_x = self.x + nx * self.speed
+        new_y = self.y + ny * self.speed
+        if not game_map.has_wall_at(new_x, new_y):
+            self.x, self.y = new_x, new_y
+        elif not game_map.has_wall_at(new_x, self.y):
+            self.x = new_x
+        elif not game_map.has_wall_at(self.x, new_y):
+            self.y = new_y
+
+    # ── update ───────────────────────────────────────────────────────────────
+
+    def update(self, player, game_map, all_enemies):
+        if not self.alive:
+            return
+
+        dx   = player.x - self.x
+        dy   = player.y - self.y
+        dist = math.sqrt(dx * dx + dy * dy)
+
+        # ── separazione tra nemici ──────────────────────────────────────────
+        sep_x, sep_y = 0.0, 0.0
+        for other in all_enemies:
+            if other is self or not other.alive:
+                continue
+            odx   = self.x - other.x
+            ody   = self.y - other.y
+            odist = math.sqrt(odx * odx + ody * ody)
+            min_d = self.radius + other.radius
+            if 0 < odist < min_d:
+                push   = (min_d - odist) / odist
+                sep_x += odx * push
+                sep_y += ody * push
+
+        if sep_x != 0 or sep_y != 0:
+            sep_len = math.sqrt(sep_x * sep_x + sep_y * sep_y)
+            self._move(sep_x / sep_len, sep_y / sep_len, game_map)
+
+        if dist > self.chase_distance:
+            return
+
+        if dist < self.stop_distance:
+            self._cooldown -= 1
+            if self._cooldown <= 0:
+                self._attack_sound.play()
+                self._damage_sound.play()
+                player.hp      = max(0, player.hp - self.attack_damage)
+                self._cooldown = self._cooldown_max
+            return
+
+        if dist == 0:
+            return
+
+        self._move(dx / dist, dy / dist, game_map)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -136,21 +167,40 @@ class AmmoBox:
 
 
 
-
-
 class ObjectManager:
     def __init__(self, player, raycaster, game_map=None, weapon=None):
         self.player = player
         self.raycaster = raycaster
         self.game_map  = game_map
         self.weapon = weapon
-        self.enemies: list[Enemy] = []
+        self.enemies: list[MeleeEnemy] = []
         self.ammo_boxes: list[AmmoBox] = []
 
-    def add_enemy(self, x, y, sprite_path, scale=1.0, y_offset=0.0):
-        self.enemies.append(
-            Enemy(x, y, sprite_path, scale=scale, y_offset=y_offset)
-        )
+    def add_melee_enemy(
+        self,
+        x, y, sprite_path,
+        *,
+        scale           = 1.0,
+        y_offset        = 0.0,
+        max_hp          = 100,
+        speed           = 1.0,
+        chase_distance  = 300,
+        stop_distance   = 14,
+        attack_damage   = 10,
+        attack_rate     = 60,
+    ):
+        self.enemies.append(MeleeEnemy(
+            x, y, sprite_path,
+            scale          = scale,
+            y_offset       = y_offset,
+            max_hp         = max_hp,
+            speed          = speed,
+            chase_distance = chase_distance,
+            stop_distance  = stop_distance,
+            attack_damage  = attack_damage,
+            attack_rate    = attack_rate,
+        ))
+
 
     def spawn_ammo_boxes(self, sprite_path: str, count: int = 3):
 
@@ -185,7 +235,7 @@ class ObjectManager:
 
     def update(self):
         for enemy in self.enemies:
-            enemy.update(self.player)
+            enemy.update(self.player, self.game_map, self.enemies)
 
         if self.weapon is not None:
             for box in self.ammo_boxes:

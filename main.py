@@ -58,7 +58,14 @@ while True:   # loop: permette di tornare al menu dopo una partita
     obj_manager = ObjectManager(player, raycaster, game_map=game_map, weapon=weapon)
     cx = len(map_grid[0]) * TILESIZE // 2   # centro x della mappa
     cy = len(map_grid)    * TILESIZE // 2   # centro y della mappa
-    obj_manager.add_enemy(cx, cy, "./Assets/enemy.png", scale=0.4, y_offset=-0.2)
+    
+
+    obj_manager.add_melee_enemy(cx, cy, "./Assets/enemy.png",
+    scale=0.9, y_offset=-0.2, speed=0.5, attack_damage=50)
+    obj_manager.add_melee_enemy(cx, cy, "./Assets/enemy.png",
+    scale=0.2, y_offset=-0.2, speed=2.0, attack_damage=5)
+    
+    
     obj_manager.spawn_ammo_boxes("./Assets/ammo_box.png", count=5)
     
     clock      = pygame.time.Clock()
