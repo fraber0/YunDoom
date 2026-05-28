@@ -1,4 +1,5 @@
 import pygame
+import random
 from settings import *
 from map import Map
 from player import Player
@@ -8,6 +9,7 @@ from lobby import run_lobby, MAPS, DIFFICULTIES
 from object_manager import ObjectManager
 from weapon import Weapon
 from audio_manager import AudioManager
+from end_screens import run_victory, run_defeat
  
 pygame.init()
 pygame.mixer.init()
@@ -27,18 +29,20 @@ def _draw_hud(screen, player):
     txt = fnt.render(f"HP  {player.hp} / {player.max_hp}", True, (255, 255, 255))
     screen.blit(txt, (bar_x + 4, bar_y + 2))
  
-while True:   # loop: permette di tornare al menu dopo una partita
+audio = AudioManager()
 
-    audio = AudioManager()
+
+while True:   
+
     audio.play("menu")
  
     # ── MENU PRINCIPALE ────────────────────────────────────────────────────────
-    run_menu(screen)
+    run_menu(screen, audio)
  
-    # ── LOBBY (difficoltà + mappa) ─────────────────────────────────────────────
+    # ── LOBBY ─────────────────────────────────────────────
     result = run_lobby(screen)
     if result is None:
-        continue   # il giocatore è tornato indietro → rimostro il menu
+        continue   
  
     diff_key, map_key = result
     diff_cfg = DIFFICULTIES[diff_key]
@@ -56,26 +60,146 @@ while True:   # loop: permette di tornare al menu dopo una partita
     weapon = Weapon("./Assets/weapon/shotgun")
     
     obj_manager = ObjectManager(player, raycaster, game_map=game_map, weapon=weapon)
-    cx = len(map_grid[0]) * TILESIZE // 2   # centro x della mappa
-    cy = len(map_grid)    * TILESIZE // 2   # centro y della mappa
+    audio.play("game", volume=0.35)
+    cx = len(map_grid[0]) * TILESIZE // 2   
+    cy = len(map_grid)    * TILESIZE // 2   
     
 
-    obj_manager.add_melee_enemy(cx, cy, "./Assets/enemy.png",
-    scale=0.9, y_offset=-0.2, speed=0.5, attack_damage=50)
-    obj_manager.add_melee_enemy(cx, cy, "./Assets/enemy.png",
-    scale=0.2, y_offset=-0.2, speed=2.0, attack_damage=5)
+    if diff_key == "Facile":
+        spawned = []
+
+        # Padre Maronno
+        for i in range(random.randint(3, 7)):
+            print(i)
+           
+
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_melee_enemy(sx, sy, "./Assets/PM.png",
+                scale=0.5, y_offset=-0.2, speed=1.0, max_hp=50, chase_distance=400, stop_distance=60, attack_damage=10, attack_rate=120)
+
+        # Ruffini
+        for i in range(random.randint(1, 2)):
+            print(i) 
+
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_ranged_enemy(sx, sy, "./Assets/Ruffini.png", "./Assets/projectile.png", scale=0.6, y_offset=-0.2, speed=0.8, max_hp=25, chase_distance=500, projectile_damage=8, fire_rate=180)
+
+        # Togni
+        sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+        print(sx, sy)
+        spawned.append((sx, sy))
+        obj_manager.add_melee_enemy(sx, sy, "./Assets/Togni.png",
+                scale=1.0, y_offset=-0.2, speed=0.7, max_hp=100, chase_distance=350, stop_distance=80, attack_damage=25, attack_rate=200)
+        
+        
+
+        obj_manager.spawn_ammo_boxes("./Assets/ammo_box.png", count=8)
+        obj_manager.spawn_heal_boxes("./Assets/heal_box.png", count=8)
+
+
+    elif diff_key == "Normale":
+        spawned = []
+
+        # Padre Maronno
+        for i in range(random.randint(5, 9)):
+            print(i)
+           
+
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_melee_enemy(sx, sy, "./Assets/PM.png",
+                scale=0.5, y_offset=-0.2, speed=1.0, max_hp=50, chase_distance=400, stop_distance=60, attack_damage=10, attack_rate=120)
+
+        # Ruffini
+        for i in range(random.randint(2, 5)):
+            print(i) 
+
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_ranged_enemy(sx, sy, "./Assets/Ruffini.png", "./Assets/projectile.png", scale=0.6, y_offset=-0.2, speed=0.8, max_hp=25, chase_distance=500, projectile_damage=8, fire_rate=180)
+
+        # Togni
+        for i in range(random.randint(1, 3)):
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_melee_enemy(sx, sy, "./Assets/Togni.png",
+                    scale=1.0, y_offset=-0.2, speed=0.7, max_hp=100, chase_distance=350, stop_distance=80, attack_damage=25, attack_rate=200)
+
+
+        # Boss
+        sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+        print(sx, sy)
+        spawned.append((sx, sy))
+        obj_manager.add_boss(sx, sy, "./Assets/boss.png", scale=1.0, y_offset=-0.2, speed=0.7)
+        
+        
+
+        obj_manager.spawn_ammo_boxes("./Assets/ammo_box.png", count=8)
+        obj_manager.spawn_heal_boxes("./Assets/heal_box.png", count=4)
+
+
+    elif diff_key == "Difficile":
+        spawned = []
+
+        # Padre Maronno
+        for i in range(random.randint(9, 14)):
+            print(i)
+           
+
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_melee_enemy(sx, sy, "./Assets/PM.png",
+                scale=0.5, y_offset=-0.2, speed=1.0, max_hp=50, chase_distance=400, stop_distance=60, attack_damage=10, attack_rate=120)
+
+        # Ruffini
+        for i in range(random.randint(3, 7)):
+            print(i) 
+
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_ranged_enemy(sx, sy, "./Assets/Ruffini.png", "./Assets/projectile.png", scale=0.6, y_offset=-0.2, speed=0.8, max_hp=26, chase_distance=600, projectile_damage=8, fire_rate=180)
+
+        # Togni
+        for i in range(random.randint(5, 9)):
+            sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+            print(sx, sy)
+            spawned.append((sx, sy))
+            obj_manager.add_melee_enemy(sx, sy, "./Assets/Togni.png",
+                    scale=1.0, y_offset=-0.2, speed=0.7, max_hp=125, chase_distance=350, stop_distance=80, attack_damage=25, attack_rate=200)
+
+
+        # Boss
+        sx, sy = obj_manager.random_spawn_pos(min_dist_from_player=150, occupied_positions=spawned)
+        print(sx, sy)
+        spawned.append((sx, sy))
+        obj_manager.add_boss(sx, sy, "./Assets/boss.png", scale=1.0, y_offset=-0.2, speed=0.9)
+        
+        
+
+        obj_manager.spawn_ammo_boxes("./Assets/ammo_box.png", count=8)
+        obj_manager.spawn_heal_boxes("./Assets/heal_box.png", count=2) 
     
-    
-    obj_manager.spawn_ammo_boxes("./Assets/ammo_box.png", count=5)
     
     clock      = pygame.time.Clock()
- 
+
     sky   = pygame.image.load("./Assets/360_F_99890228_xRXJFnENLpAHdl82Y5LrRg11RwWMb5KO.jpg").convert()
     floor_color = (50, 150, 50)
  
     # ── GAME LOOP ──────────────────────────────────────────────────────────────
-    running = True
+    running    = True
+    end_result = None   
     while running:
+
+
         clock.tick(60)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -83,6 +207,7 @@ while True:   # loop: permette di tornare al menu dopo una partita
                 exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False   # torna al menu principale
+                end_result = None
                 
             # ── evento sparo ──
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
@@ -90,7 +215,6 @@ while True:   # loop: permette di tornare al menu dopo una partita
                     weapon.shoot()
                     obj_manager.try_shoot()
  
-        pygame.mixer.music.stop()
 
         player.update()
         raycaster.castAllRays()
@@ -102,6 +226,19 @@ while True:   # loop: permette di tornare al menu dopo una partita
         raycaster.render(screen)
         obj_manager.render(screen)
         obj_manager.update()
+
+        # ── condizioni di fine partita ────────────────────────────────────────
+        all_enemies_dead = (
+            all(not e.alive for e in obj_manager.enemies) and
+            all(not e.alive for e in obj_manager.ranged_enemies)
+        )
+
+        if player.hp <= 0:
+            running = False
+            end_result = "defeat"
+        elif all_enemies_dead:
+            running = False
+            end_result = "victory"
         
         
         
@@ -110,7 +247,7 @@ while True:   # loop: permette di tornare al menu dopo una partita
         
         weapon.render(screen)
         
-        # HUD: difficoltà + mappa in alto a sinistra
+        # HUD
         fnt = pygame.font.SysFont("consolas", 16)
         hud = fnt.render(f"{map_key}  |  {diff_key}  |  [ESC] menu", True, (200, 200, 200))
         screen.blit(hud, (8, 6))
@@ -130,4 +267,19 @@ while True:   # loop: permette di tornare al menu dopo una partita
 
         pygame.display.update()
 
-        
+    # ── FINE PARTITA: mostra la schermata appropriata ─────────────────────────
+    if end_result == "victory":
+        run_victory(
+            screen,
+            image_path=None,          
+            sound_path="./Assets/sounds/victory.mp3",          
+            sound_volume=0.7,
+        )
+    elif end_result == "defeat":
+        run_defeat(
+            screen,
+            image_path=None,          
+            sound_path="./Assets/sounds/defeat.mp3",          
+            sound_volume=0.6,
+        )
+   

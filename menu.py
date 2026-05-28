@@ -3,13 +3,15 @@ import sys
 from settings import *
  
 
-def run_menu(screen):
+def run_menu(screen, audio):
     """
     Mostra il menu di avvio. Ritorna True se il giocatore vuole iniziare,
     False se vuole uscire.
     """
     clock = pygame.time.Clock()
     
+    bg_image = pygame.image.load("./Assets/home.png").convert()
+    bg_image = pygame.transform.scale(bg_image, (WINDOW_WIDTH, WINDOW_HEIGHT))
     
  
     # Colori
@@ -32,6 +34,14 @@ def run_menu(screen):
     btn_play  = pygame.Rect(center_x - btn_w // 2, WINDOW_HEIGHT // 2 + 20,  btn_w, btn_h)
     btn_info  = pygame.Rect(center_x - btn_w // 2, WINDOW_HEIGHT // 2 + 100, btn_w, btn_h)
     btn_quit  = pygame.Rect(center_x - btn_w // 2, WINDOW_HEIGHT // 2 + 180, btn_w, btn_h)
+    # --- BOTTONE CREDITS ---
+    credits_size = 42
+    btn_credits = pygame.Rect(
+        WINDOW_WIDTH - credits_size - 16,
+        WINDOW_HEIGHT - credits_size - 16,
+        credits_size,
+        credits_size
+    )
  
     # Effetto "scanlines"
     scanline_surf = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
@@ -63,10 +73,15 @@ def run_menu(screen):
                 if btn_quit.collidepoint(mouse_pos):
                     pygame.quit()
                     sys.exit()
+                if btn_credits.collidepoint(mouse_pos):
+                    run_credits(screen, audio)
  
         # --- SFONDO ---
-        screen.fill(COLOR_BG)
-        _draw_perspective_grid(screen, tick)
+        if bg_image:
+            screen.blit(bg_image, (0, 0))
+        else:
+            screen.fill(COLOR_BG)
+            _draw_perspective_grid(screen, tick)
         screen.blit(scanline_surf, (0, 0))
  
         '''
@@ -84,22 +99,51 @@ def run_menu(screen):
         play_hover = btn_play.collidepoint(mouse_pos)
         pygame.draw.rect(screen, COLOR_BTN_HOVER if play_hover else COLOR_BTN, btn_play, border_radius=8)
         pygame.draw.rect(screen, COLOR_BORDER, btn_play, 2, border_radius=8)
-        play_txt = font_btn.render("▶  GIOCA", True, COLOR_BTN_TEXT)
+        play_txt = font_btn.render("GIOCA", True, COLOR_BTN_TEXT)
         screen.blit(play_txt, play_txt.get_rect(center=btn_play.center))
  
         # --- BOTTONE ISTRUZIONI ---
         info_hover = btn_info.collidepoint(mouse_pos)
         pygame.draw.rect(screen, COLOR_BTN_HOVER if info_hover else COLOR_BTN, btn_info, border_radius=8)
         pygame.draw.rect(screen, COLOR_BORDER, btn_info, 2, border_radius=8)
-        info_txt = font_btn.render("?  ISTRUZIONI", True, COLOR_BTN_TEXT)
+        info_txt = font_btn.render("ISTRUZIONI", True, COLOR_BTN_TEXT)
         screen.blit(info_txt, info_txt.get_rect(center=btn_info.center))
  
         # --- BOTTONE QUIT ---
         quit_hover = btn_quit.collidepoint(mouse_pos)
         pygame.draw.rect(screen, COLOR_BTN_HOVER if quit_hover else COLOR_BTN, btn_quit, border_radius=8)
         pygame.draw.rect(screen, COLOR_BORDER, btn_quit, 2, border_radius=8)
-        quit_txt = font_btn.render("✕  ESCI", True, COLOR_QUIT_TEXT)
+        quit_txt = font_btn.render("ESCI", True, COLOR_QUIT_TEXT)
         screen.blit(quit_txt, quit_txt.get_rect(center=btn_quit.center))
+
+        # --- BOTTONE CREDITS ---
+        credits_hover = btn_credits.collidepoint(mouse_pos)
+
+        credits_bg = (60, 56, 54) if not credits_hover else (80, 73, 69)
+        credits_border = (168, 153, 132)
+
+        pygame.draw.rect(
+            screen,
+            credits_bg,
+            btn_credits,
+            border_radius=6
+        )
+
+        pygame.draw.rect(
+            screen,
+            credits_border,
+            btn_credits,
+            1,
+            border_radius=6
+        )
+
+        credits_txt = font_btn.render("i", True, (235, 219, 178))
+        screen.blit(
+            credits_txt,
+            credits_txt.get_rect(center=btn_credits.center)
+        )
+
+
  
         # --- HINT TASTIERA ---
         hint = font_subtitle.render("[INVIO] per iniziare  •  [ESC] per uscire", True, (80, 80, 100))
@@ -127,12 +171,11 @@ def run_instructions(screen):
     font_btn   = pygame.font.SysFont("consolas", 28, bold=True)
  
     commands = [
-        ("↑",       "Avanza"),
-        ("↓",       "Indietreggia"),
+        ("WASD",       "Muoviti"),
         ("←",       "Ruota a sinistra"),
         ("→",       "Ruota a destra"),
         ("ESC",     "Esci dal gioco"),
-        ("[INVIO]", "Avvia la partita dal menu"),
+        ("[INVIO]", "Avvia la partita"),
     ]
  
     center_x = WINDOW_WIDTH // 2
@@ -223,3 +266,181 @@ def _draw_perspective_grid(screen, tick):
         x_edge = int(WINDOW_WIDTH * i / num_v)
         pygame.draw.line(screen, color, (x_edge, 0),    (cx, cy))
         pygame.draw.line(screen, color, (x_edge, WINDOW_HEIGHT), (cx, cy))
+
+
+
+
+
+def run_credits(screen, audio):
+
+    audio.play("info")
+
+    clock = pygame.time.Clock()
+
+    # Gruvbox palette
+    BG      = (40, 40, 40)
+    PANEL   = (60, 56, 54)
+    BORDER  = (102, 92, 84)
+    TEXT    = (235, 219, 178)
+    ACCENT  = (250, 189, 47)
+    SUBTEXT = (168, 153, 132)
+
+    font_title = pygame.font.SysFont("consolas", 42, bold=True)
+    font_text  = pygame.font.SysFont("consolas", 28)
+    font_small = pygame.font.SysFont("consolas", 18)
+
+    center_x = WINDOW_WIDTH // 2
+
+    btn_back = pygame.Rect(
+        center_x - 100,
+        WINDOW_HEIGHT - 60,
+        200,
+        42
+    )
+
+    credits = [
+        ("CREDITS", ACCENT),
+        ("", TEXT),
+
+        ("Sviluppato da", TEXT),
+        ("", TEXT),
+
+        ("Francesco Berra", SUBTEXT),
+        ("Giovanni Manfredini", SUBTEXT),
+        ("Davide Parra", SUBTEXT),
+        ("Sheng Shun Xu", SUBTEXT),
+
+        ("", TEXT),
+        ("< -- YunDoom -- >", ACCENT),
+
+        ("", TEXT),
+        ("Grazie per aver giocato", TEXT),
+    ]
+
+    # posizione iniziale
+    scroll_y = WINDOW_HEIGHT
+
+    # velocità scroll
+    scroll_speed = 1.2
+
+    spacing = 46
+
+    while True:
+        dt = clock.tick(60)
+
+        mouse_pos = pygame.mouse.get_pos()
+
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    audio.play("menu")
+                    return
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if btn_back.collidepoint(mouse_pos):
+                    return
+
+        # ─────────────────────────────
+        # UPDATE SCROLL
+        # ─────────────────────────────
+
+        scroll_y -= scroll_speed
+
+        # altezza totale testo
+        total_height = len(credits) * spacing
+
+        # reset loop
+        if scroll_y < -total_height:
+            scroll_y = WINDOW_HEIGHT
+
+        # ─────────────────────────────
+        # DRAW
+        # ─────────────────────────────
+
+        screen.fill(BG)
+
+        # panel
+        panel = pygame.Rect(
+            70,
+            20,
+            WINDOW_WIDTH - 140,
+            WINDOW_HEIGHT - 100
+        )
+
+        pygame.draw.rect(screen, PANEL, panel, border_radius=10)
+        pygame.draw.rect(screen, BORDER, panel, 2, border_radius=10)
+
+        # clipping area
+        clip_rect = pygame.Rect(
+            panel.x,
+            panel.y,
+            panel.width,
+            panel.height
+        )
+
+        screen.set_clip(clip_rect)
+
+        # draw scrolling text
+        for i, (line, color) in enumerate(credits):
+
+            y = scroll_y + i * spacing
+
+            if line == "CREDITS":
+                surf = font_title.render(line, True, color)
+            else:
+                surf = font_text.render(line, True, color)
+
+            rect = surf.get_rect(center=(center_x, y))
+
+            screen.blit(surf, rect)
+
+        screen.set_clip(None)
+
+        '''
+        # ─────────────────────────────
+        # BOTTONE BACK
+        # ─────────────────────────────
+
+        hover = btn_back.collidepoint(mouse_pos)
+
+        pygame.draw.rect(
+            screen,
+            (80, 73, 69) if hover else PANEL,
+            btn_back,
+            border_radius=8
+        )
+
+        pygame.draw.rect(
+            screen,
+            BORDER,
+            btn_back,
+            2,
+            border_radius=8
+        )
+
+        back_txt = font_text.render("← INDIETRO", True, TEXT)
+
+        screen.blit(
+            back_txt,
+            back_txt.get_rect(center=btn_back.center)
+        )
+        '''
+
+        hint = font_small.render(
+            "[ESC] torna al menu",
+            True,
+            SUBTEXT
+        )
+
+        screen.blit(
+            hint,
+            hint.get_rect(center=(center_x, WINDOW_HEIGHT - 15))
+        )
+        
+
+        pygame.display.update()

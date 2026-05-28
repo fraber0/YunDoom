@@ -15,7 +15,6 @@ class Player:
         self.moveSpeed = move_speed
         self.rotationSpeed = rot_speed if rot_speed is not None else 2 * (math.pi / 180)
  
-        # se viene passata una mappa la usa, altrimenti crea quella default
         self.map = game_map if game_map is not None else Map()
 
         # ── vita ──
